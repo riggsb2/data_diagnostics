@@ -1,0 +1,55 @@
+- # TODO: Type of capacity to match unit type
+    - ref file of acceptable values
+- # TODO: confirm_reviewed
+    - ignore REVIEWED points on next run
+- # TODO: Change from export to jsons to save as class pickle?
+- TODO: CAP normalized to standard for scale calc.
+    - Establlish unit conversion reference file
+- # TODO: table spareseness relations (no project on event, don't expect
+project data)
+    - Meta analysis of missing data (correlation of missings)
+- # TODO: if File is called, save diagnostics to home folder
+- ## TODO: add function criterion class to schema
+
+1.0.0
+    - ## TODO: Feature Change: Update script to generalize to any table
+        - Update schema
+        - Readd duplicate check
+        - ## TODO: method to link categories to a json file
+        - ## TODO: Add relational checks
+            - ## TODO: Sum checks
+        - ## TODO: Add sense checks
+        - ## TODO: Add outlier checks method to schema
+        - Add column diagnostics
+    - ## TODO: Feature Change: Add method to link to schema location
+    - ## TODO: Feature Change: Add method to export draft schema as json, or py
+    - ## TODO: Feature Change: update error_log to write to a log file
+    - ## TODO: add config.json for file paths
+
+0.7.0
+    - Added method to fill in missing IDs
+
+0.6.0
+
+0.5.0
+    - Method in Validation_Notebook to flag if it's been reviewed
+        and add comments
+        - add attribute to load and export REVIEWED obs. It should be a
+        list of obs, col, error, criterion, and value
+    - Green_field IND metrics through OUTLIER
+    - IND metrics Compared to last TINC through IND_metrics
+    - growths correlation and cross-checks
+
+0.4.0
+    - Added method to export_duplicate to export duplicates to excel for review
+
+0.3.0
+    - Added duplicate review
+    - List of common errors ('Nan' as TAN_ACCEPTED)
+    - Copy validation notebook into export folder
+
+0.2.0
+    - Updated to use class structure
+
+0.1.0  
+    - Initiated script and outline.
