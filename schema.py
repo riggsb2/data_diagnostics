@@ -7,7 +7,7 @@ import inspect
 import datetime
 
 class criterion():
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         '''
         criterion could be a list, int, string, or callable
         '''
@@ -21,7 +21,7 @@ class criterion():
 
 
 class data_type(criterion):
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         class_translate = {'str': str, 
                            'int': int, 
                            'float': float,
@@ -68,7 +68,7 @@ class data_type(criterion):
 
 
 class nullable(criterion):
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         criterion = bool(criterion)
         if not isinstance(criterion, bool):
             raise TypeError(f'nullable criterion must be a bool or str bool. {type(criterion)} {criterion} provided')
@@ -90,7 +90,7 @@ class function(criterion):
 
 
 class min(function):
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         
         if not isinstance(criterion, int) and \
             not isinstance(criterion, datetime.date) and \
@@ -114,7 +114,7 @@ class min(function):
 
 
 class max(function):
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         if not isinstance(criterion, int) and \
             not isinstance(criterion, datetime.date) and \
             not isinstance(criterion, datetime.datetime) and \
@@ -137,7 +137,7 @@ class max(function):
         
 
 class max_len(criterion):
-    def __init__(self, criterion):
+    def __init__(self, criterion, **kwargs):
         criterion = int(criterion)
         if not isinstance(criterion, int):
             raise TypeError(f'max_len criterion must be an integer. {type(criterion)} {criterion} provided')
@@ -157,12 +157,21 @@ class max_len(criterion):
 
 
 class category(criterion):
-    def __init__(self, criterion):
-        if isinstance(criterion, str):
-            criterion = [x.strip() for x in criterion.split(',')]
-        if not isinstance(criterion, list):
-            raise TypeError(f'category criterion must be a list or comma separated string. {type(criterion)} {criterion} provided')
+    def __init__(self, name, path, **kwargs):
+        import json
+
+        if not os.path.join(os.path.join(path, 'category_files', name)):
+            raise ValueError(f'Category json not found in category_files. {name} provided')
         
+        ft = name.split('.')[1]
+        if ft=='json':
+            with open(os.path.join(path, 'category_files', name), 'r') as f:
+                criterion = json.load(f)
+        elif ft=='txt':
+            with open(os.path.join(path, 'category_files', name), 'r') as f:
+                criterion = [x.strip() for y in f.readlines() for x in y.split(',')]
+        else:
+            raise TypeError('File type {ft} is not supported currently.')
         super().__init__(criterion)
 
     def evaluate(self, value):
@@ -206,7 +215,8 @@ def import_schema(path, filename='schema.xlsx', column_name='column_name'):
             if crit_type not in CRITERIA_TYPES:
                 warnings.warn(f'imported schema includes not supported criteria_type: {crit_type}')
                 continue
-            sheet_schema[k][crit_type] = CRITERIA_TYPES[crit_type](criterion)
+            sheet_schema[k][crit_type] = CRITERIA_TYPES[crit_type](criterion, **{'path': path})
+
 
     return sheet_schema
 

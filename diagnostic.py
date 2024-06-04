@@ -1,55 +1,44 @@
 import pandas as pd
 import os
-from copy import deepcopy
+import json
+from importlib import import_module
+from statsmodels.stats.stattools import medcouple
+import numpy as np
+import math as m
 
-def outlier_check():
-    column_data = self.base_data[col]
+def outlier_check(column_data):
+
     non_nans = [x for x in column_data.tolist() if not np.isnan(x)]
     if len(non_nans)>1:
         process = 'OUTLIER'
         # Checks for outliers based on base_data. Uses medcouple adjusted
         # outlier detection (p25+IQ)
         # https://en.wikipedia.org/wiki/Box_plot#Variations
-        if process in check_list or 'ALL' in check_list:
-            p25 = column_data.quantile(q=0.25)
-            p75 = column_data.quantile(q=0.75)
-            mc = medcouple(non_nans)
-            
-            if mc >=0:
-                lower = p25-1.5*np.exp(-4*mc)*abs(p75-p25)
-                upper = p75+1.5*np.exp(3*mc)*abs(p75-p25)
-            else:
-                lower = p25-1.5*np.exp(-3*mc)*abs(p75-p25)
-                upper = p75+1.5*np.exp(4*mc)*abs(p75-p25)
 
-            self.column_dict[col]['Check_Count']+=1
-            outlier_index = column_data.index[(column_data>upper) | (column_data<lower)]
+        p25 = column_data.quantile(q=0.25)
+        p75 = column_data.quantile(q=0.75)
+        mc = medcouple(non_nans)
+        
+        if mc >=0:
+            lower = p25-1.5*np.exp(-4*mc)*abs(p75-p25)
+            upper = p75+1.5*np.exp(3*mc)*abs(p75-p25)
+        else:
+            lower = p25-1.5*np.exp(-3*mc)*abs(p75-p25)
+            upper = p75+1.5*np.exp(4*mc)*abs(p75-p25)
 
-            update_columns(outlier_index, col, 'OUTLIER', 'ids')
+        return [(column_data<=upper) | (column_data>=lower)]
+    
 
-            self.column_dict[col]['UPPER_BND'] = upper
-            self.column_dict[col]['LOWER_BND'] = lower
-            update_obs(outlier_index, col, 'OUTLIER', (lower, upper))
-
-            self.column_dict[col]['Quality'] += obs-len(outlier_index)
-
-def scale_check():
-    process = 'SCALE'
+def scale_check(column_data):
     # order of magnitude check. Determines OOM of each value in the field and
     # uses the p80 range of the calculated OOMs to set a bounding range
-    if process in check_list or 'ALL' in check_list:
 
-        self.column_dict[col]['Check_Count']+=1
-        oom_data = column_data.apply(lambda x: m.floor(m.log(abs(x), 10)) if not np.isnan(x) and x!=0 else np.nan)
-        lower_oom = oom_data.quantile(q=0.1)
-        upper_oom = oom_data.quantile(q=0.9)
+    oom_data = column_data.apply(lambda x: m.floor(m.log(abs(x), 10)) if not np.isnan(x) and x!=0 else np.nan)
+    lower_oom = oom_data.quantile(q=0.1)
+    upper_oom = oom_data.quantile(q=0.9)
 
-        oom_index = oom_data.index[(oom_data>upper_oom) | (oom_data<lower_oom)]
-        update_columns(oom_index, col, 'SCALE', 'ids')
-        self.column_dict[col]['UPPER_SCALE'] = upper_oom
-        self.column_dict[col]['LOWER_SCALE'] = lower_oom
-        update_obs(oom_index, col, 'SCALE', (lower_oom, upper_oom))
-        self.column_dict[col]['Quality'] += obs-len(oom_index)
+    return [(oom_data<=upper_oom) | (oom_data>=lower_oom)]
+
 
 def sense_checks():
     ...
@@ -58,12 +47,13 @@ def sum_check():
     ...
 
 class diagnostics():
-    def __init__(self, base_data:pd.DataFrame, schema:dict, index_column:str, sense_checks:dict=None,
+    def __init__(self, base_data:pd.DataFrame, schema_dict:dict, index_column:str=None, sense_checks:dict=None,
                  id_columns:list=None):
 
+
         self.base_data = base_data
-        self.schema = schema
-        self.index_column = index_column
+        self.schema_dict = schema_dict
+        self.index_column = index_column        
         self.id_columns = id_columns
         self.sense_checks = sense_checks
 
@@ -159,33 +149,52 @@ class diagnostics():
                 compare_df = compare_df.reindex(first_index+[x for x in compare_df.index if x not in first_index] )
                 self.comparison_set.append(compare_df.to_dict())
             
+        
+        def assemble_for_error_log(s, crit_type, criterion, passfail):
+            s = s[~passfail]
+            s.name= 'data'
+            
+            s = s.to_frame()
+            s['criterion_name'] = crit_type
+            s['criterion'] = str(criterion)
+            s['column'] = c
+            return s
+        
         errors = []
         for c in self.base_data.columns:
-            if c not in self.schema.keys():
+            if c not in self.schema_dict.keys():
                 print(f'column {c} does not have a schema associated with it')
                 continue
 
             # For schema checks
-            for crit_type, cls in self.schema[c].items():
+            for crit_type, cls in self.schema_dict[c].items():
                 if pd.isnull(cls): continue
                 passfail = self.base_data[c].apply(cls.evaluate)
                 update_attributes(c, crit_type, passfail)
+                errors.append(assemble_for_error_log(self.base_data[c], crit_type, cls.criterion, passfail))
 
-                s = self.base_data[c][~passfail]
-                s.name= 'data'
-                
-                s = s.to_frame()
-                s['criterion_name'] = crit_type
-                s['criterion'] = str(cls.criterion)
-                s['column'] = c
-                errors.append(s)
+                # For outlier checks on numeric data
+                if crit_type== 'data_type' and cls in ['float', 'int']:
+                    passfail = outlier_check(self.base_data[c])
+                    update_attributes(c, 'outlier', passfail)
+                    errors.append(assemble_for_error_log(self.base_data[c], crit_type, cls.criterion, passfail))
 
-            # For sense checks/relations
+                    passfail = scale_check(self.base_data[c])
+                    update_attributes(c, 'scale', passfail)
+                    errors.append(assemble_for_error_log(self.base_data[c], crit_type, cls.criterion, passfail))
+
+
+        # For sense checks/relations
+        for name, obj in self.sense_checks.items():
+            results = obj.evaluate(self.base_data)
+            passfail = results.apply(obj.flag)
+
+            errors.append(assemble_for_error_log(results, 'sense_check', name, passfail))
 
 
         compiled_errors = pd.concat(errors, axis=0)
         compiled_errors = compiled_errors.sort_index()
-        #compiled_errors.to_excel(os.path.join(export_path, 'data_concerns.xlsx'))
+        compiled_errors.to_excel(os.path.join(export_path, 'data_concerns.xlsx'))
 
         duplicate_check(self.base_data, **kwargs)
 

@@ -10,21 +10,25 @@ project data)
     - Meta analysis of missing data (correlation of missings)
 - # TODO: if File is called, save diagnostics to home folder
 - ## TODO: add function criterion class to schema
+- ## TODO: Move sense check config to a json or excel. string function name, string kwargs, 
 
-1.0.0
-    - ## TODO: Feature Change: Update script to generalize to any table
-        - Update schema
-        - Readd duplicate check
-        - ## TODO: method to link categories to a json file
-        - ## TODO: Add relational checks
-            - ## TODO: Sum checks
-        - ## TODO: Add sense checks
-        - ## TODO: Add outlier checks method to schema
-        - Add column diagnostics
+1.1.0
     - ## TODO: Feature Change: Add method to link to schema location
     - ## TODO: Feature Change: Add method to export draft schema as json, or py
     - ## TODO: Feature Change: update error_log to write to a log file
+
+1.0.0
+    - ## TODO: user interface
     - ## TODO: add config.json for file paths
+    - Feature Change: Update script to generalize to any table
+        - Update schema
+        - Readd duplicate check
+        - method to link categories to category files (json and text supported)
+        - Add relational checks
+            - Sum checks
+            - Add sense checks
+        - Add outlier checks method to diagnostics class
+        - Add column diagnostics
 
 0.7.0
     - Added method to fill in missing IDs

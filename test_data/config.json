@@ -1,0 +1,10 @@
+{
+    "files": {
+        "data": "test_table.xlsx", 
+        "schema": "test_schema.xlsx", 
+        "sense_check": "sense_checks.py"
+    },
+    "attributes": {
+        "index_column": "ID"
+    }
+}
