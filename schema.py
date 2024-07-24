@@ -27,7 +27,16 @@ class data_type(criterion):
                            'float': float,
                            'bool': bool, 
                            'date': datetime.date,
-                           'datetime': datetime.datetime}
+                           'datetime': datetime.datetime,
+                           'Text':str,
+                            'Boolean':bool,
+                            'Float': float,
+                            'Integer':int,
+                            'Date':datetime.date,
+                            'Percentage': float,
+                            'Percent': float,
+                            }
+        
         if criterion in class_translate.keys():
             criterion = class_translate[criterion]
 
@@ -67,6 +76,18 @@ class data_type(criterion):
             except: return None
 
 
+class zeroable(criterion):
+    def evaluate(self, value):
+        if pd.isnull(self.criterion): return True
+        if self.criterion:
+            return True
+        
+        return value!=0
+    
+    def enforce(self, value):
+        if not self.evaluate(value):
+            return None
+        return value
 class nullable(criterion):
     def __init__(self, criterion, **kwargs):
         criterion = bool(criterion)
@@ -159,19 +180,26 @@ class max_len(criterion):
 class category(criterion):
     def __init__(self, name, path, **kwargs):
         import json
-
-        if not os.path.join(os.path.join(path, 'category_files', name)):
-            raise ValueError(f'Category json not found in category_files. {name} provided')
         
-        ft = name.split('.')[1]
-        if ft=='json':
-            with open(os.path.join(path, 'category_files', name), 'r') as f:
-                criterion = json.load(f)
-        elif ft=='txt':
-            with open(os.path.join(path, 'category_files', name), 'r') as f:
-                criterion = [x.strip() for y in f.readlines() for x in y.split(',')]
+        if len(name.split('.'))>=2:
+            if name.split('.')[-11]=='json':
+                with open(os.path.join(path, 'category_files', name), 'r') as f:
+                    criterion = json.load(f)
+            elif name.split('.')[-1]=='txt':
+                with open(os.path.join(path, 'category_files', name), 'r') as f:
+                    criterion = [x.strip() for y in f.readlines() for x in y.split(',')]    
+            else:
+                raise TypeError(f'{name.split('.')} is not a supported file type')
         else:
-            raise TypeError('File type {ft} is not supported currently.')
+            if os.path.isfile(os.path.join(path, 'category_files', name+'.json')):
+                with open(os.path.join(path, 'category_files', name+'.json'), 'r') as f:
+                    criterion = json.load(f)
+            elif os.path.isfile(os.path.join(path, 'category_files', name+'.txt')):
+                with open(os.path.join(path, 'category_files', name+'.txt'), 'r') as f:
+                    criterion = [x.strip() for y in f.readlines() for x in y.split(',')]
+            else:
+                raise ValueError(f'Category json not found in category_files. {name} provided')
+        
         super().__init__(criterion)
 
     def evaluate(self, value):
@@ -194,6 +222,7 @@ class category(criterion):
 CRITERIA_TYPES = {
     'data_type': data_type,
     'nullable': nullable, 
+    'zeroable': zeroable,
     'min': min, 
     'max': max, 
     'max_len': max_len,
@@ -202,22 +231,29 @@ CRITERIA_TYPES = {
 }
 
 
-def import_schema(path, filename='schema.xlsx', column_name='column_name'):
+def import_schema(path, filename='schema.xlsx', column_name='column_name', **kwargs):
     sheet_schema = pd.read_excel(os.path.join(path, filename))
+    sheet_schema = sheet_schema[sheet_schema[column_name].notnull()]
     sheet_schema = sheet_schema.set_index(column_name).to_dict(orient='index')
 
     # Convert sheet_schema into a dict
     ## For each row 
+    del_list = []
     for k, v in sheet_schema.items():
         for crit_type, criterion in v.items():
             if pd.isnull(criterion):
                 continue
             if crit_type not in CRITERIA_TYPES:
                 warnings.warn(f'imported schema includes not supported criteria_type: {crit_type}')
+                del_list.append((k, crit_type))
                 continue
+            
             sheet_schema[k][crit_type] = CRITERIA_TYPES[crit_type](criterion, **{'path': path})
+    for d in del_list:
+        del sheet_schema[d[0]][d[1]]
+        
 
-
+    print('Completed Schema Import')
     return sheet_schema
 
 

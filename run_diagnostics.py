@@ -4,6 +4,7 @@ import sys
 import time
 import getpass
 import pandas as pd
+import json
 
 from diagnostic import diagnostics
 import schema
@@ -15,22 +16,26 @@ sys.path.append(rf'C:\Users\{username}\AP-Networks\Benchmarking Group - Document
 pd.options.mode.chained_assignment =None
 
 if __name__ == '__main__':
-    try:
-        today = time.strftime('%Y%m%d', time.localtime())
-        config_folder = r'C:\Users\briggs\AP-Networks\Benchmarking Group - Documents\Data Quality\Diagnostics\data_diagnostics\test_data'
-        data = pd.read_excel(os.path.join(os.getcwd(), 'data_diagnostics', 'test_data', 'test_table.xlsx'))
-        index_columns = None
-        
-        sys.path.append(config_folder)
-        from sense_checks import CHECK_DICT
-        schema_dict = schema.import_schema(config_folder)
+    #try:
+    config_folder = r'C:\Users\briggs\AP-Networks\Benchmarking Group - Documents\Data Quality\Diagnostics\project_diagnostic_config'
 
-        x = diagnostics(data, schema_dict, index_columns, sense_checks=CHECK_DICT)
-        x.run_diagnostics(name_columns=['ID'])
+    import os
+    import time
 
-    except Exception as e:
-        print('Main error')
-        print(e)
+    today = time.strftime('%Y%m%d', time.localtime())
+    OUTPUT_FOLDER = '_'.join((config_folder.split('\\')[-1], today))
+
+    x = diagnostics(config_folder_path=config_folder, output_folder=OUTPUT_FOLDER, index_column='Project_Table_ID')
+    x.index_column = 'Project_ID'
+    x.name_columns = ['Company','Facility','ProjectName']
+    x.run_diagnostics()
+
+    x.summary_report()
+
+    x.export()
+
+    #except Exception as e:
+     #   print('Main error')
+      #  print(e)
 
     print('Done')
-    input()
