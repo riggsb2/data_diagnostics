@@ -16,10 +16,16 @@ project data)
     - ## TODO: Feature Change: Add method to link to schema location
     - ## TODO: Feature Change: Add method to export draft schema as json, or py
     - ## TODO: Feature Change: update error_log to write to a log file
+    - user interface to process diagnostic jsons
 
 1.0.0
-    - ## TODO: user interface
-    - ## TODO: add config.json for file paths
+    - Added dependence criteria for actual vs planned variables
+    - added run_log.log exports
+    - added separate summary.log export
+    - add config.json for file paths
+    - Compress storage for obs and column
+    - Add summary report
+    - Error logging during run_ingestion
     - Feature Change: Update script to generalize to any table
         - Update schema
         - Readd duplicate check

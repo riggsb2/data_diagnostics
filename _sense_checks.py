@@ -133,7 +133,7 @@ class sense_check():
 
         returns: pd.Series, includes the bound exceeded and a truth value.
         """
-        
+        if pd.isnull(x): return True
         if self.bounds[0] and self.bounds[1]:
             if x<self.bounds[0]:
                 return False
@@ -144,10 +144,7 @@ class sense_check():
 
 
 def ratio_xy(data, x, y):
-    try:
-        return(data[x]/data[y])
-    except:
-        return None
+    return(data[x]/data[y])
 
 def sum_total(data:Union[pd.DataFrame, pd.Series], total_name, component_names):
     '''
@@ -156,7 +153,22 @@ def sum_total(data:Union[pd.DataFrame, pd.Series], total_name, component_names):
 
     e.g. if sum is 10000, the bounds should be on the order of 10
     '''
-    try:
-        return data[total_name] - data[component_names].sum()
-    except:
-        return None
+    sum_cols = []
+    if isinstance(data, pd.Series):
+        list_check = data.index
+    elif isinstance(data, pd.DataFrame):
+        list_check = data.columns
+
+    sum_cols = [c for c in component_names if c in list_check]
+
+    return data[total_name] - data[sum_cols].sum()
+
+    
+def difference(data, difference_name, minuend, subtrahend):
+    return data[difference_name] - (data[minuend]-data[subtrahend])
+
+    
+def bound_check(data, column):
+    return data[column]
+
+    
